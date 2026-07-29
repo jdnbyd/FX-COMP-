@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>SIGNAL STUDIO</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <span class="brand-name">SIGNAL<em>//</em>STUDIO</span>
+      </div>
+      <div class="top-ticks" aria-hidden="true"></div>
+      <div class="console-bar" aria-hidden="true">MAGI.SYS 適格 <span class="sq b"></span><span class="sq r"></span><span class="sq g"></span></div>
+      <div class="top-status" id="top-status">READY</div>
+    </header>
+
+    <nav id="sidebar"></nav>
+
+    <main id="stage-wrap">
+      <div class="hud-corner tl"></div><div class="hud-corner tr"></div>
+      <div class="hud-corner bl"></div><div class="hud-corner br"></div>
+      <div class="hud-plus" style="top:8px;left:50%"></div>
+      <div class="hud-plus" style="bottom:8px;left:50%"></div>
+      <div class="hud-plus" style="top:50%;left:8px"></div>
+      <div class="hud-plus" style="top:50%;right:8px"></div>
+      <div id="stage"></div>
+    </main>
+
+    <aside id="panel">
+      <div id="panel-head"><span id="panel-title">—</span></div>
+      <div id="panel-body"></div>
+    </aside>
+
+    <footer id="statusbar">
+      <span id="status-text">SIGNAL STUDIO v1.0 — OPERATIONAL</span>
+      <div id="status-progress"><div id="status-progress-fill"></div></div>
+    </footer>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="js/util.js"></script>
+  <script src="js/controls.js"></script>
+  <script src="js/colorwheel.js"></script>
+  <script src="js/palettes.js"></script>
+  <script src="js/assets.js"></script>
+  <script src="js/fx_scanlines.js"></script>
+  <script src="js/fx_bevel.js"></script>
+  <script src="js/fx_dither.js"></script>
+  <script src="js/fx_colorcorrect.js"></script>
+  <script src="js/fx_airbrush.js"></script>
+  <script src="js/fx_paperscan.js"></script>
+  <script src="js/fx_reeded.js"></script>
+  <script src="js/fx_trails.js"></script>
+  <script src="js/fx_riso.js"></script>
+  <script src="js/fx_gradient.js"></script>
+  <script src="js/fx_noisegrain.js"></script>
+  <script src="js/fx_pixelsort.js"></script>
+  <script src="js/fx_presets.js"></script>
+  <script src="js/tool_fx.js"></script>
+  <script src="js/tool_type.js"></script>
+  <script src="js/tool_grid.js"></script>
+  <script src="js/tool_layout.js"></script>
+  <script src="js/tool_shapes.js"></script>
+  <script src="js/tool_micro.js"></script>
+  <script src="js/tool_lace.js"></script>
+  <script src="js/tool_ornament.js"></script>
+  <script src="js/tool_psychos.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

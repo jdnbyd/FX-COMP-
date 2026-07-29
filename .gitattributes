@@ -1,0 +1,11 @@
+# Normalize text to LF so macOS/Linux checkouts are clean
+* text=auto eol=lf
+
+# Binary assets — never touch
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.tif binary
+*.otf binary
+*.mp4 binary
+*.mov binary

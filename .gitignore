@@ -1,0 +1,14 @@
+# deps — Mac users get platform ffmpeg via `npm install`
+node_modules/
+
+# build output (regenerated per platform)
+dist/
+
+# local build cache of cross-platform ffmpeg binaries (Windows-only helper)
+vendor-ffmpeg/
+
+# scratch / os
+scripts/pack-mac-tar.py.bak
+*.log
+.DS_Store
+Thumbs.db
