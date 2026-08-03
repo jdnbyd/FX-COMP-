@@ -5,7 +5,24 @@
   const stage = document.getElementById('stage');
   const panelTitle = document.getElementById('panel-title');
   const panelBody = document.getElementById('panel-body');
+  const panelFoot = document.getElementById('panel-foot');
   let active = null;
+
+  // Pinned action bar at the bottom of the panel. Terminal actions (export)
+  // live here so they never require scrolling the control list.
+  window.setPanelActions = function (items) {
+    panelFoot.innerHTML = '';
+    if (!items || !items.length) { panelFoot.classList.remove('on'); return; }
+    panelFoot.classList.add('on');
+    const row = el('div', 'btn-row');
+    for (const it of items) {
+      const b = el('button', 'btn ' + (it.cls || 'primary'), it.label);
+      b.addEventListener('click', it.onClick);
+      if (it.title) b.title = it.title;
+      row.appendChild(b);
+    }
+    panelFoot.appendChild(row);
+  };
 
   const groups = [];
   for (const t of window.TOOLS) {
@@ -33,7 +50,9 @@
     buttons.forEach((b, id) => b.classList.toggle('active', id === tool.id));
     panelTitle.textContent = tool.name;
     panelBody.innerHTML = '';
+    window.setPanelActions(null);
     stage.innerHTML = '';
+    document.getElementById('stage-wrap').classList.remove('has-dock', 'dock-collapsed');
     try {
       tool.mount(stage, panelBody);
     } catch (e) {

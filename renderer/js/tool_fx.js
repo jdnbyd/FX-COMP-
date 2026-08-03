@@ -43,6 +43,16 @@
   })();
   function saveOrder() { localStorage.setItem('sig.fx.order', JSON.stringify(S.order)); }
 
+  // which effect blocks are expanded in the panel — collapsed blocks render only
+  // their header, which is what keeps the panel from becoming 7 screens tall
+  S.expanded = new Set(
+    (JSON.parse(localStorage.getItem('sig.fx.expanded') || 'null') || []).filter((k) => byKey(k))
+  );
+  function saveExpanded() {
+    localStorage.setItem('sig.fx.expanded', JSON.stringify([...S.expanded]));
+  }
+  S.paletteOpen = localStorage.getItem('sig.fx.paletteOpen') === '1';
+
   // per-effect state persistence so live tweaks survive reloads / restarts
   (function initState() {
     const saved = JSON.parse(localStorage.getItem('sig.fx.state') || 'null');
@@ -56,6 +66,9 @@
 
   let canvas, ctx, stageEl, panelEl, swatchEls = [], fileInfoEl, playBtn, scrubEl, presetSel;
   let exporting = false;
+  // video export settings — module-scoped so the pinned footer and the
+  // settings controls in the panel share one object across rebuilds
+  const vidOpts = { fps: '30', scale: '100', audio: true };
 
   function saveCustom() { localStorage.setItem('sig.fx.custom', JSON.stringify(S.customPalette)); }
 
@@ -400,9 +413,22 @@
   window.FXTool = { openPath };
 
   // ---------- palette editor (dither) ----------
-  function paletteEditorUI(box) {
-    box.appendChild(el('div', 'ctl-section', 'Dither palette'));
+  function paletteEditorUI(outer) {
     const st = S.dither;
+    // secondary by default — 18 swatches is the single tallest thing in the
+    // panel, and it only matters while actually editing a custom palette
+    const head = el('div', 'ctl-subhead');
+    const open = S.paletteOpen;
+    head.innerHTML = '<span>Dither palette</span><span>' + (open ? '▾' : '▸') + '</span>';
+    head.addEventListener('click', () => {
+      S.paletteOpen = !S.paletteOpen;
+      localStorage.setItem('sig.fx.paletteOpen', S.paletteOpen ? '1' : '0');
+      buildPanel();
+    });
+    outer.appendChild(head);
+    if (!open) { S._syncSwatches = null; swatchEls = []; return; }
+    const box = el('div');
+    outer.appendChild(box);
 
     const modeRow = el('div', 'ctl-row');
     modeRow.appendChild(el('label', null, 'Mode'));
@@ -499,14 +525,31 @@
     syncSwatches();
   }
 
-  // ---------- stack dock (left side, drag to reorder) ----------
+  // ---------- stack dock (left of stage, drag to reorder) ----------
   let dockEl = null;
+  let dockCollapsed = localStorage.getItem('sig.fx.dockCollapsed') === '1';
   function buildDock() {
     if (!stageEl) return;
     const wrap = stageEl.parentElement;
     if (dockEl) dockEl.remove();
-    dockEl = el('div', 'fx-dock');
-    dockEl.appendChild(el('div', 'fx-dock-title', 'STACK ⇕'));
+    dockEl = el('div', 'fx-dock' + (dockCollapsed ? ' collapsed' : ''));
+    // the stage insets to clear the dock, so artwork is pushed aside, never covered
+    wrap.classList.add('has-dock');
+    wrap.classList.toggle('dock-collapsed', dockCollapsed);
+
+    const title = el('div', 'fx-dock-title');
+    title.appendChild(el('span', 'fx-dock-label', 'STACK ⇕'));
+    const toggle = el('button', 'fx-dock-toggle', dockCollapsed ? '›' : '‹');
+    toggle.title = dockCollapsed ? 'Expand stack' : 'Collapse stack';
+    toggle.addEventListener('click', () => {
+      dockCollapsed = !dockCollapsed;
+      localStorage.setItem('sig.fx.dockCollapsed', dockCollapsed ? '1' : '0');
+      buildDock();
+      if (!S.playing) render();
+    });
+    title.appendChild(toggle);
+    dockEl.appendChild(title);
+    if (dockCollapsed) { wrap.appendChild(dockEl); return; }
     let dragKey = null;
 
     let dragEl = null;
@@ -525,6 +568,8 @@
       cb.addEventListener('change', () => {
         S[key].on = cb.checked;
         item.classList.toggle('on', cb.checked);
+        if (cb.checked) S.expanded.add(key); else S.expanded.delete(key);
+        saveExpanded();
         invalidate(); render(); buildPanel();
       });
       // clicking the checkbox shouldn't start a drag
@@ -570,24 +615,50 @@
   // ---------- panel ----------
   function fxSection(body, fx) {
     const st = S[fx.key];
-    body.appendChild(el('div', 'ctl-section', fx.label));
-    const row = el('div', 'ctl-row');
-    row.appendChild(el('label', null, 'Enable'));
+    const open = S.expanded.has(fx.key);
+
+    const block = el('div', 'fx-block' + (st.on ? ' on' : '') + (open ? ' open' : ''));
+
+    // header: enable checkbox + name + expand chevron (always rendered)
+    const head = el('div', 'fx-block-head');
     const cb = document.createElement('input');
     cb.type = 'checkbox'; cb.checked = st.on;
-    cb.addEventListener('change', () => { st.on = cb.checked; invalidate(); render(); buildDock(); });
-    row.appendChild(cb);
-    body.appendChild(row);
+    cb.title = 'Enable effect';
+    cb.addEventListener('click', (e) => e.stopPropagation());
+    cb.addEventListener('change', () => {
+      st.on = cb.checked;
+      // turning an effect on reveals its controls; turning it off tucks them away
+      if (cb.checked) S.expanded.add(fx.key); else S.expanded.delete(fx.key);
+      saveExpanded();
+      invalidate(); render(); buildDock(); buildPanel();
+    });
+    head.appendChild(cb);
+    head.appendChild(el('span', 'fx-block-name', fx.label));
+    head.appendChild(el('span', 'fx-block-chev', open ? '▾' : '▸'));
+    // clicking the header toggles expansion independently of enable, so a
+    // disabled effect can still be pre-configured
+    head.addEventListener('click', () => {
+      if (S.expanded.has(fx.key)) S.expanded.delete(fx.key); else S.expanded.add(fx.key);
+      saveExpanded();
+      buildPanel();
+    });
+    block.appendChild(head);
 
-    if (window.FX_PRESETS[fx.key]) {
-      presetRow(body, window.FX_PRESETS[fx.key], (params) => {
-        Object.assign(st, fx.mod().defaults, params, { on: true });
-        buildPanel();
-        invalidate(); render();
-      });
+    if (open) {
+      const inner = el('div', 'fx-block-body');
+      if (window.FX_PRESETS[fx.key]) {
+        presetRow(inner, window.FX_PRESETS[fx.key], (params) => {
+          Object.assign(st, fx.mod().defaults, params, { on: true });
+          S.expanded.add(fx.key); saveExpanded();
+          buildPanel(); buildDock();
+          invalidate(); render();
+        });
+      }
+      buildControls(inner, fx.mod().schema, st, () => { invalidate(); render(); if (S._syncSwatches) S._syncSwatches(); });
+      if (fx.key === 'dither') paletteEditorUI(inner);
+      block.appendChild(inner);
     }
-    buildControls(body, fx.mod().schema, st, () => { invalidate(); render(); if (S._syncSwatches) S._syncSwatches(); });
-    if (fx.key === 'dither') paletteEditorUI(body);
+    body.appendChild(block);
   }
 
   function buildPanel() {
@@ -639,25 +710,22 @@
 
     for (const key of S.order) { const fx = byKey(key); if (fx) fxSection(body, fx); }
 
-    body.appendChild(el('div', 'ctl-section', 'Export'));
-    const ex1 = el('div', 'btn-row');
-    const bImg = el('button', 'btn primary', '⬆ EXPORT IMAGE');
-    bImg.addEventListener('click', exportImage);
-    ex1.appendChild(bImg);
-    body.appendChild(ex1);
-
-    const vidOpts = { fps: '30', scale: '100', audio: true };
+    body.appendChild(el('div', 'ctl-section', 'Export settings'));
     buildControls(body, [
       { type: 'select', key: 'fps', label: 'Video FPS', options: ['24', '30', '60'] },
       { type: 'select', key: 'scale', label: 'Video scale %', options: ['100', '75', '50'] },
       { type: 'check', key: 'audio', label: 'Keep audio' }
     ], vidOpts, null);
-    const ex2 = el('div', 'btn-row');
-    const bVid = el('button', 'btn primary', '⬆ EXPORT VIDEO');
-    bVid.addEventListener('click', () => exportVideo({ fps: parseInt(vidOpts.fps), scalePct: parseInt(vidOpts.scale), withAudio: vidOpts.audio }));
-    ex2.appendChild(bVid);
-    body.appendChild(ex2);
     body.appendChild(el('div', 'hint', 'Every frame runs the full stack. Motion Trails and animated Reeded Glass accumulate across frames — best on video.'));
+
+    // terminal actions live in the pinned footer, never behind a scroll
+    window.setPanelActions([
+      { label: '⬆ IMAGE', title: 'Export still image', onClick: exportImage },
+      {
+        label: '⬆ VIDEO', title: 'Export video through the FX stack',
+        onClick: () => exportVideo({ fps: parseInt(vidOpts.fps), scalePct: parseInt(vidOpts.scale), withAudio: vidOpts.audio })
+      }
+    ]);
   }
 
   window.TOOLS.push({
@@ -680,6 +748,14 @@
       buildPanel();
       buildDock();
     },
-    unmount() { stopPlayback(); if (dockEl) { dockEl.remove(); dockEl = null; } }
+    unmount() {
+      stopPlayback();
+      if (dockEl) {
+        const wrap = dockEl.parentElement;
+        if (wrap) wrap.classList.remove('has-dock', 'dock-collapsed');
+        dockEl.remove();
+        dockEl = null;
+      }
+    }
   });
 })();
