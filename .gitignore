@@ -7,6 +7,12 @@ dist/
 # local build cache of cross-platform ffmpeg binaries (Windows-only helper)
 vendor-ffmpeg/
 
+# vendored agent skills — reinstall with:
+#   npx skills@latest add emilkowalski/skills
+# skills-lock.json IS tracked so the set is reproducible
+.agents/
+.claude/skills/
+
 # scratch / os
 scripts/pack-mac-tar.py.bak
 *.log
