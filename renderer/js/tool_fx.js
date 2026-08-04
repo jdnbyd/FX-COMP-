@@ -26,7 +26,7 @@
     rafId: 0,
     frame: 0,
     previewMaxW: 880,
-    customPalette: JSON.parse(localStorage.getItem('sig.fx.custom') || 'null') ||
+    customPalette: JSON.parse(localStorage.getItem('mfx.fx.custom') || 'null') ||
       ['#0a0a0a', '#ff2079', '#00f0ff', '#c8f751', '#ffe600', '#9d00ff',
         '#1e1b4b', '#7c3aed', '#f0abfc', '#118ab2', '#06d6a0', '#e63329',
         '#f7d038', '#a4133c', '#e9d8a6', '#5c33a4', '#38c7d8', '#ffffff'],
@@ -36,32 +36,32 @@
   for (const fx of FX_LIST) S[fx.key] = { on: false, ...fx.mod().defaults };
   // effect order — persisted, validated against the registry
   (function initOrder() {
-    let o = JSON.parse(localStorage.getItem('sig.fx.order') || 'null') || DEFAULT_ORDER;
+    let o = JSON.parse(localStorage.getItem('mfx.fx.order') || 'null') || DEFAULT_ORDER;
     o = o.filter((k) => byKey(k));
     for (const k of DEFAULT_ORDER) if (!o.includes(k)) o.push(k);
     S.order = o;
   })();
-  function saveOrder() { localStorage.setItem('sig.fx.order', JSON.stringify(S.order)); }
+  function saveOrder() { localStorage.setItem('mfx.fx.order', JSON.stringify(S.order)); }
 
   // which effect blocks are expanded in the panel — collapsed blocks render only
   // their header, which is what keeps the panel from becoming 7 screens tall
   S.expanded = new Set(
-    (JSON.parse(localStorage.getItem('sig.fx.expanded') || 'null') || []).filter((k) => byKey(k))
+    (JSON.parse(localStorage.getItem('mfx.fx.expanded') || 'null') || []).filter((k) => byKey(k))
   );
   function saveExpanded() {
-    localStorage.setItem('sig.fx.expanded', JSON.stringify([...S.expanded]));
+    localStorage.setItem('mfx.fx.expanded', JSON.stringify([...S.expanded]));
   }
-  S.paletteOpen = localStorage.getItem('sig.fx.paletteOpen') === '1';
+  S.paletteOpen = localStorage.getItem('mfx.fx.paletteOpen') === '1';
 
   // per-effect state persistence so live tweaks survive reloads / restarts
   (function initState() {
-    const saved = JSON.parse(localStorage.getItem('sig.fx.state') || 'null');
+    const saved = JSON.parse(localStorage.getItem('mfx.fx.state') || 'null');
     if (saved) for (const fx of FX_LIST) if (saved[fx.key]) Object.assign(S[fx.key], saved[fx.key]);
   })();
   function saveFxState() {
     const snap = {};
     for (const fx of FX_LIST) snap[fx.key] = { ...S[fx.key] };
-    localStorage.setItem('sig.fx.state', JSON.stringify(snap));
+    localStorage.setItem('mfx.fx.state', JSON.stringify(snap));
   }
 
   let canvas, ctx, stageEl, panelEl, swatchEls = [], fileInfoEl, playBtn, scrubEl, presetSel;
@@ -70,32 +70,29 @@
   // settings controls in the panel share one object across rebuilds
   const vidOpts = { fps: '30', scale: '100', audio: true };
 
-  function saveCustom() { localStorage.setItem('sig.fx.custom', JSON.stringify(S.customPalette)); }
+  function saveCustom() { localStorage.setItem('mfx.fx.custom', JSON.stringify(S.customPalette)); }
 
   // in-app name prompt — Electron's window.prompt() is a no-op, so presets never saved
   function inlinePrompt(title, cb) {
-    const back = el('div', 'sig-modal-back');
-    const box = el('div', 'sig-modal');
-    box.appendChild(el('div', 'sig-modal-title', title));
-    const inp = document.createElement('input');
-    inp.type = 'text'; inp.className = 'sig-modal-input'; inp.placeholder = 'name…';
-    box.appendChild(inp);
-    const row = el('div', 'btn-row');
-    const ok = el('button', 'btn primary', 'SAVE');
-    const cancel = el('button', 'btn', 'CANCEL');
-    row.appendChild(ok); row.appendChild(cancel);
-    box.appendChild(row);
-    back.appendChild(box);
-    document.body.appendChild(back);
-    inp.focus();
-    const close = () => back.remove();
-    const submit = () => { const v = inp.value.trim(); close(); if (v) cb(v); };
-    ok.addEventListener('click', submit);
-    cancel.addEventListener('click', close);
-    back.addEventListener('mousedown', (e) => { if (e.target === back) close(); });
-    inp.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') submit();
-      else if (e.key === 'Escape') close();
+    let inp, close;
+    const submit = () => {
+      const v = inp.value.trim();
+      close();
+      if (v) cb(v);
+    };
+    close = openModal({
+      title,
+      build(body) {
+        inp = document.createElement('input');
+        inp.type = 'text'; inp.className = 'sig-modal-input'; inp.placeholder = 'name…';
+        body.appendChild(inp);
+        inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+        setTimeout(() => inp.focus(), 0);
+      },
+      actions: [
+        { label: 'SAVE', cls: 'primary', onClick: submit },
+        { label: 'CANCEL', onClick: (close) => close() }
+      ]
     });
   }
 
@@ -266,7 +263,7 @@
   }
 
   // ---------- presets (full stack) ----------
-  function loadPresets() { return JSON.parse(localStorage.getItem('sig.fx.presets') || '{}'); }
+  function loadPresets() { return JSON.parse(localStorage.getItem('mfx.fx.presets') || '{}'); }
   function refreshPresetList() {
     presetSel.innerHTML = '<option value="">— preset —</option>';
     for (const name of Object.keys(window.STACK_PRESETS)) {
@@ -286,7 +283,7 @@
       const snap = { customPalette: S.customPalette.slice(), order: S.order.slice() };
       for (const fx of FX_LIST) snap[fx.key] = { ...S[fx.key] };
       ps[name] = snap;
-      localStorage.setItem('sig.fx.presets', JSON.stringify(ps));
+      localStorage.setItem('mfx.fx.presets', JSON.stringify(ps));
       refreshPresetList();
       presetSel.value = name;
       toast('PRESET SAVED — ' + name);
@@ -319,7 +316,7 @@
     if (!presetSel.value || presetSel.value.startsWith('★')) return;
     const ps = loadPresets();
     delete ps[presetSel.value];
-    localStorage.setItem('sig.fx.presets', JSON.stringify(ps));
+    localStorage.setItem('mfx.fx.presets', JSON.stringify(ps));
     refreshPresetList();
   }
 
@@ -342,6 +339,7 @@
     if (exporting) return { ok: false, error: 'busy' };
     const outPath = opts.outPath || await window.native.chooseSavePath({
       defaultName: S.source.name + '-fx.mp4',
+      defaultDir: localStorage.getItem('mfx.exportDir') || undefined,
       filters: [{ name: 'MP4', extensions: ['mp4'] }, { name: 'MOV', extensions: ['mov'] }]
     });
     if (!outPath) return { ok: false, error: 'cancelled' };
@@ -393,6 +391,128 @@
     }
   }
 
+  // ---------- batch import/export (images only) ----------
+  // Decodes a describeMedia() descriptor into a plain {el,w,h,name} source
+  // without touching the visible stage — mirrors loadFromDescriptor's image
+  // branches but skips setSource()'s DOM/UI side effects, since batch items
+  // render entirely off-DOM.
+  async function decodeImageDescriptor(f) {
+    const name = (f.path || 'untitled').split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
+    if (f.kind === 'image-raw') {
+      const c = document.createElement('canvas');
+      c.width = f.width; c.height = f.height;
+      c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(f.data), f.width, f.height), 0, 0);
+      return { el: c, w: f.width, h: f.height, name, ext: 'png' };
+    }
+    const img = new Image();
+    img.src = f.url;
+    await img.decode();
+    const ext = (f.ext || 'png').toLowerCase();
+    return { el: img, w: img.naturalWidth, h: img.naturalHeight, name, ext: (ext === 'jpeg' ? 'jpg' : ext) };
+  }
+
+  async function openBatchModal() {
+    const descriptors = await window.native.openMediaBatch();
+    if (!descriptors || !descriptors.length) return;
+
+    let items = descriptors.map((d) => ({ descriptor: d, url: d.url, name: (d.path || '').split(/[\\/]/).pop(), status: null }));
+    let destDir = localStorage.getItem('mfx.exportDir') || null;
+    let grid, destLabel;
+
+    function runBtnEl() {
+      return [...document.querySelectorAll('.batch-modal .btn-row .btn')].find((b) => b.textContent === 'RUN BATCH');
+    }
+
+    function renderGrid() {
+      grid.innerHTML = '';
+      for (const item of items) {
+        const cell = el('div', 'batch-item' + (item.status ? ' ' + item.status : ''));
+        const img = document.createElement('img');
+        img.src = item.url;
+        img.addEventListener('error', () => { img.style.display = 'none'; cell.appendChild(el('span', 'launch-card-icon', '◧')); });
+        cell.appendChild(img);
+        cell.appendChild(el('span', 'batch-item-label', item.name));
+        if (item.status === 'error') cell.title = item.error || 'failed';
+        const rm = el('button', 'batch-item-remove', '×');
+        rm.type = 'button';
+        rm.title = 'Remove';
+        rm.addEventListener('click', () => { items = items.filter((it) => it !== item); renderGrid(); });
+        cell.appendChild(rm);
+        grid.appendChild(cell);
+      }
+    }
+
+    async function pickDest() {
+      const p = await window.native.chooseDirectory({ defaultPath: destDir || undefined });
+      if (!p) return;
+      destDir = p;
+      destLabel.textContent = destDir;
+    }
+
+    async function runBatch() {
+      if (!items.length) { toast('No images to process'); return; }
+      if (!destDir) { toast('Choose a destination folder first'); return; }
+      const runBtn = runBtnEl();
+      if (runBtn) runBtn.disabled = true;
+      stopPlayback();
+      const origSource = S.source;
+      let done = 0, failed = 0;
+      for (const item of items) {
+        setStatus('BATCH ' + (done + failed + 1) + '/' + items.length + ' — ' + item.name);
+        setProgress((done + failed) / items.length);
+        try {
+          const src = await decodeImageDescriptor(item.descriptor);
+          S.source = { type: 'image', el: src.el, w: src.w, h: src.h, path: item.descriptor.path, name: src.name };
+          S.adaptiveCache = null;
+          FXTrails.reset();
+          const work = document.createElement('canvas');
+          renderToOutput(work, src.w, src.h, { time: 0, frame: 0, reset: true });
+          const outPath = destDir.replace(/[\\/]+$/, '') + '/' + src.name + '-fx.' + src.ext;
+          await saveCanvasImageToPath(work, outPath);
+          item.status = 'done';
+          done++;
+        } catch (e) {
+          item.status = 'error';
+          item.error = e.message;
+          failed++;
+        }
+        renderGrid();
+      }
+      S.source = origSource;
+      S.adaptiveCache = null;
+      FXTrails.reset();
+      setProgress(null);
+      setStatus('READY');
+      if (S.source) render();
+      if (runBtn) runBtn.disabled = false;
+      toast('BATCH COMPLETE — ' + done + '/' + items.length + ' exported' + (failed ? ', ' + failed + ' failed' : ''));
+    }
+
+    openModal({
+      title: 'BATCH EXPORT',
+      className: 'batch-modal',
+      build(body) {
+        const destRow = el('div', 'ctl-row');
+        destRow.appendChild(el('label', null, 'Folder'));
+        destLabel = el('span', 'hint export-dir-path', destDir || 'not set');
+        const destBtn = el('button', 'btn', 'CHOOSE…');
+        destBtn.type = 'button';
+        destBtn.addEventListener('click', pickDest);
+        destRow.appendChild(destBtn);
+        body.appendChild(destRow);
+        body.appendChild(destLabel);
+
+        grid = el('div', 'batch-grid');
+        body.appendChild(grid);
+        renderGrid();
+      },
+      actions: [
+        { label: 'CANCEL', onClick: (close) => close() },
+        { label: 'RUN BATCH', cls: 'primary', onClick: () => runBatch() }
+      ]
+    });
+  }
+
   async function openPath(d) {
     const f = await window.native.loadMedia(d.path);
     if (!f) return;
@@ -422,7 +542,7 @@
     head.innerHTML = '<span>Dither palette</span><span>' + (open ? '▾' : '▸') + '</span>';
     head.addEventListener('click', () => {
       S.paletteOpen = !S.paletteOpen;
-      localStorage.setItem('sig.fx.paletteOpen', S.paletteOpen ? '1' : '0');
+      localStorage.setItem('mfx.fx.paletteOpen', S.paletteOpen ? '1' : '0');
       buildPanel();
     });
     outer.appendChild(head);
@@ -527,7 +647,7 @@
 
   // ---------- stack dock (left of stage, drag to reorder) ----------
   let dockEl = null;
-  let dockCollapsed = localStorage.getItem('sig.fx.dockCollapsed') === '1';
+  let dockCollapsed = localStorage.getItem('mfx.fx.dockCollapsed') === '1';
   function buildDock() {
     if (!stageEl) return;
     const wrap = stageEl.parentElement;
@@ -543,7 +663,7 @@
     toggle.title = dockCollapsed ? 'Expand stack' : 'Collapse stack';
     toggle.addEventListener('click', () => {
       dockCollapsed = !dockCollapsed;
-      localStorage.setItem('sig.fx.dockCollapsed', dockCollapsed ? '1' : '0');
+      localStorage.setItem('mfx.fx.dockCollapsed', dockCollapsed ? '1' : '0');
       buildDock();
       if (!S.playing) render();
     });
@@ -670,6 +790,10 @@
     const bImp = el('button', 'btn primary', '⬇ IMPORT MEDIA');
     bImp.addEventListener('click', importMedia);
     btns.appendChild(bImp);
+    const bBatch = el('button', 'btn', '▦ BATCH');
+    bBatch.title = 'Batch-process multiple images with the current effect stack';
+    bBatch.addEventListener('click', openBatchModal);
+    btns.appendChild(bBatch);
     body.appendChild(btns);
     fileInfoEl = el('div', 'file-info', S.source ? `${S.source.name} — ${S.source.w}×${S.source.h}` : 'no source — PNG · JPG · TIF · MP4 · MOV');
     body.appendChild(fileInfoEl);
@@ -732,7 +856,7 @@
     id: 'fx',
     group: 'EFFECTS',
     name: 'FX Compositor',
-    sub: '9-effect stack · video + image',
+    sub: '12-effect stack · video + image',
     mount(stage, panel) {
       stageEl = stage; panelEl = panel;
       if (S.source) {
@@ -756,6 +880,34 @@
         dockEl.remove();
         dockEl = null;
       }
+    },
+    // ---------- project save/load (see projects.js) ----------
+    serialize() {
+      const state = {};
+      for (const fx of FX_LIST) state[fx.key] = { ...S[fx.key] };
+      return {
+        state,
+        order: S.order,
+        expanded: [...S.expanded],
+        customPalette: S.customPalette,
+        paletteOpen: S.paletteOpen,
+        sourcePath: S.source ? S.source.path : null
+      };
+    },
+    async hydrate(data) {
+      if (!data) return;
+      if (data.state) for (const fx of FX_LIST) if (data.state[fx.key]) Object.assign(S[fx.key], data.state[fx.key]);
+      if (data.order) {
+        S.order = data.order.filter((k) => byKey(k));
+        for (const k of DEFAULT_ORDER) if (!S.order.includes(k)) S.order.push(k);
+        saveOrder();
+      }
+      if (data.expanded) { S.expanded = new Set(data.expanded.filter((k) => byKey(k))); saveExpanded(); }
+      if (data.customPalette) { S.customPalette = data.customPalette; saveCustom(); }
+      if (typeof data.paletteOpen === 'boolean') S.paletteOpen = data.paletteOpen;
+      saveFxState();
+      if (data.sourcePath) { try { await openPath({ path: data.sourcePath }); } catch (e) { console.error(e); } }
+      if (stageEl && panelEl) { buildPanel(); buildDock(); if (S.source) render(); }
     }
   });
 })();

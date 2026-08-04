@@ -1,8 +1,8 @@
 {
-  "name": "signal-studio",
-  "productName": "SIGNAL STUDIO",
+  "name": "midfx",
+  "productName": "midFX",
   "version": "1.0.0",
-  "description": "Typography, layout and FX studio for images and video. Marathon-inspired UI.",
+  "description": "Typography, layout and FX studio for images and video.",
   "main": "main.js",
   "scripts": {
     "start": "electron ."

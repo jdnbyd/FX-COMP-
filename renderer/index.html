@@ -2,7 +2,31 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>SIGNAL STUDIO</title>
+  <script>
+    // Apply the saved theme and custom skin before the stylesheet resolves,
+    // so first paint never flashes the default look before switching.
+    // Keep in sync with skin.js's applyAll() if the storage shape changes.
+    (function () {
+      try {
+        var t = localStorage.getItem('mfx.theme');
+        if (t && t !== 'midnight') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+      try {
+        var skin = JSON.parse(localStorage.getItem('mfx.customSkin') || '{}');
+        var root = document.documentElement;
+        var classFor = { bg: 'skin-bg', sliderTrack: 'skin-slider-track', sliderThumb: 'skin-slider-thumb', panelTexture: 'skin-panel' };
+        var varFor = { bg: '--skin-bg-url', sliderTrack: '--skin-slider-track-url', sliderThumb: '--skin-slider-thumb-url', panelTexture: '--skin-panel-texture-url' };
+        for (var slot in classFor) {
+          var entry = skin[slot];
+          if (entry && entry.path) {
+            root.classList.add(classFor[slot]);
+            root.style.setProperty(varFor[slot], 'url("' + 'file:///' + entry.path.replace(/\\/g, '/').replace(/ /g, '%20') + '?v=' + entry.v + '")');
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <title>midFX</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -10,14 +34,16 @@
     <header id="topbar">
       <div class="brand">
         <span class="brand-mark"></span>
-        <span class="brand-name">SIGNAL<em>//</em>STUDIO</span>
+        <span class="brand-name">mid<em>FX</em></span>
       </div>
-      <div class="top-ticks" aria-hidden="true"></div>
-      <div class="console-bar" aria-hidden="true">MAGI.SYS 適格 <span class="sq b"></span><span class="sq r"></span><span class="sq g"></span></div>
-      <div class="top-status" id="top-status">READY</div>
+      <nav id="tabbar"></nav>
+      <div class="top-actions">
+        <div id="project-control"></div>
+        <div class="top-status" id="top-status">READY</div>
+        <button id="btn-home" class="icon-btn" type="button" title="Past Projects" aria-label="Past Projects">🏠</button>
+        <button id="btn-settings" class="icon-btn" type="button" title="Settings" aria-label="Settings">⚙</button>
+      </div>
     </header>
-
-    <nav id="sidebar"></nav>
 
     <main id="stage-wrap">
       <div class="hud-corner tl"></div><div class="hud-corner tr"></div>
@@ -36,14 +62,23 @@
     </aside>
 
     <footer id="statusbar">
-      <span id="status-text">SIGNAL STUDIO v1.0 — OPERATIONAL</span>
+      <span id="status-text">midFX v1.0 — OPERATIONAL</span>
       <div id="status-progress"><div id="status-progress-fill"></div></div>
     </footer>
   </div>
 
   <div id="toast"></div>
 
+  <div id="launch-screen" class="hidden">
+    <div class="launch-inner">
+      <div class="launch-title">PAST PROJECTS</div>
+      <div id="launch-grid" class="launch-grid"></div>
+    </div>
+  </div>
+
   <script src="js/util.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/skin.js"></script>
   <script src="js/controls.js"></script>
   <script src="js/colorwheel.js"></script>
   <script src="js/palettes.js"></script>
@@ -64,12 +99,8 @@
   <script src="js/tool_fx.js"></script>
   <script src="js/tool_type.js"></script>
   <script src="js/tool_grid.js"></script>
-  <script src="js/tool_layout.js"></script>
-  <script src="js/tool_shapes.js"></script>
-  <script src="js/tool_micro.js"></script>
-  <script src="js/tool_lace.js"></script>
-  <script src="js/tool_ornament.js"></script>
-  <script src="js/tool_psychos.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/projects.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

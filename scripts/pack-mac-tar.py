@@ -1,7 +1,7 @@
 import os, sys, tarfile
 
-src_root = sys.argv[1]          # e.g. dist/SIGNAL STUDIO-darwin-x64
-out_path = sys.argv[2]          # e.g. dist/SIGNAL STUDIO-darwin-x64.tar.gz
+src_root = sys.argv[1]          # e.g. dist/midFX-darwin-x64
+out_path = sys.argv[2]          # e.g. dist/midFX-darwin-x64.tar.gz
 arc_root = os.path.basename(os.path.normpath(src_root))
 
 def filt(ti: tarfile.TarInfo):

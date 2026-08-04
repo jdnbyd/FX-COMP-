@@ -14,6 +14,13 @@ schema item types:
  { type:'buttons', items:[{label,onClick,cls}] }
  { type:'html', build(container) }
 */
+function decimalsFor(step) {
+  if (!step || step >= 1) return 0;
+  const s = String(step);
+  const i = s.indexOf('.');
+  return i < 0 ? 0 : s.length - i - 1;
+}
+
 function buildControls(container, schema, state, onChange) {
   const refs = {};
   const fire = (key) => onChange && onChange(key, state);
@@ -58,10 +65,10 @@ function buildControls(container, schema, state, onChange) {
       inp.type = 'range';
       inp.min = item.min; inp.max = item.max; inp.step = item.step || 1;
       inp.value = state[item.key];
-      const val = el('span', 'val', String(state[item.key]));
+      const val = el('span', 'val', Number(state[item.key]).toFixed(decimalsFor(item.step)));
       inp.addEventListener('input', () => {
         state[item.key] = parseFloat(inp.value);
-        val.textContent = String(state[item.key]);
+        val.textContent = Number(state[item.key]).toFixed(decimalsFor(item.step));
         fire(item.key);
       });
       row.appendChild(inp); row.appendChild(val);

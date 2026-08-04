@@ -1,7 +1,7 @@
 /* app.js — shell: nav, tool mounting, global status */
 
 (function () {
-  const sidebar = document.getElementById('sidebar');
+  const tabbar = document.getElementById('tabbar');
   const stage = document.getElementById('stage');
   const panelTitle = document.getElementById('panel-title');
   const panelBody = document.getElementById('panel-body');
@@ -24,24 +24,13 @@
     panelFoot.appendChild(row);
   };
 
-  const groups = [];
-  for (const t of window.TOOLS) {
-    let g = groups.find((x) => x.name === t.group);
-    if (!g) { g = { name: t.group, tools: [] }; groups.push(g); }
-    g.tools.push(t);
-  }
-
   const buttons = new Map();
-  for (const g of groups) {
-    const box = el('div', 'nav-group');
-    box.appendChild(el('div', 'nav-group-label', g.name));
-    for (const t of g.tools) {
-      const b = el('button', 'nav-item', `${t.name}<span class="sub">${t.sub || ''}</span>`);
-      b.addEventListener('click', () => select(t));
-      box.appendChild(b);
-      buttons.set(t.id, b);
-    }
-    sidebar.appendChild(box);
+  for (const t of window.TOOLS) {
+    const b = el('button', 'tab-item', t.name);
+    if (t.sub) b.title = t.sub;
+    b.addEventListener('click', () => select(t));
+    tabbar.appendChild(b);
+    buttons.set(t.id, b);
   }
 
   function select(tool) {
@@ -60,6 +49,12 @@
       stage.innerHTML = '<div class="stage-empty"><div class="big">MODULE FAULT</div>' + e.message + '</div>';
     }
     document.getElementById('top-status').textContent = tool.name.toUpperCase();
+    // restart the fade-in transition (forced reflow — content already mounted above)
+    for (const target of [stage, panelBody]) {
+      target.classList.remove('tool-anim');
+      void target.offsetWidth;
+      target.classList.add('tool-anim');
+    }
   }
 
   if (window.native) {
@@ -75,4 +70,14 @@
   }
 
   if (window.TOOLS.length) select(window.TOOLS[0]);
+
+  window.SigApp = { select, getActive: () => active };
+
+  const settingsBtn = document.getElementById('btn-settings');
+  if (settingsBtn) settingsBtn.addEventListener('click', () => { if (window.Settings) window.Settings.open(); });
+
+  const homeBtn = document.getElementById('btn-home');
+  if (homeBtn) homeBtn.addEventListener('click', () => { if (window.Projects) window.Projects.showLaunchScreen(); });
+
+  if (window.Projects) window.Projects.boot();
 })();

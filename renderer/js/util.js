@@ -1,6 +1,20 @@
 /* util.js — shared helpers, seeded RNG, color math, export helpers */
 window.TOOLS = [];
 
+// one-time copy of pre-rename localStorage keys (sig.fx.* -> mfx.fx.*) so
+// existing FX presets/state survive the SIGNAL STUDIO -> midFX rename.
+// old keys are left in place (not deleted) — cheap, and avoids any risk of
+// losing data if this ever ran twice or partway.
+(function migrateLegacyStorage() {
+  const keys = ['custom', 'order', 'expanded', 'paletteOpen', 'state', 'presets', 'dockCollapsed'];
+  for (const k of keys) {
+    const oldKey = 'sig.fx.' + k, newKey = 'mfx.fx.' + k;
+    if (localStorage.getItem(newKey) === null && localStorage.getItem(oldKey) !== null) {
+      localStorage.setItem(newKey, localStorage.getItem(oldKey));
+    }
+  }
+})();
+
 // ---------- seeded RNG ----------
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -165,6 +179,47 @@ function toast(msg) {
   t._h = setTimeout(() => t.classList.remove('show'), 2600);
 }
 function setStatus(msg) { document.getElementById('status-text').textContent = msg; }
+
+// generic modal: openModal({title, className, build(bodyEl), actions:[{label,cls,onClick(close)}]})
+// returns close(). Backdrop click and Escape both close. onClick receives
+// close so callers can chain confirmations before dismissing.
+function openModal({ title, className, build, actions, onClose } = {}) {
+  const back = el('div', 'sig-modal-back');
+  const box = el('div', 'sig-modal' + (className ? ' ' + className : ''));
+  if (title) box.appendChild(el('div', 'sig-modal-title', title));
+  const body = el('div', 'sig-modal-body');
+  box.appendChild(body);
+  if (build) build(body);
+  if (actions && actions.length) {
+    const row = el('div', 'btn-row');
+    for (const a of actions) {
+      const b = el('button', 'btn ' + (a.cls || ''), a.label);
+      b.addEventListener('click', () => a.onClick && a.onClick(close));
+      row.appendChild(b);
+    }
+    box.appendChild(row);
+  }
+  back.appendChild(box);
+  document.body.appendChild(back);
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  document.addEventListener('keydown', onKey);
+  function close() {
+    if (!back.isConnected) return;
+    back.remove();
+    document.removeEventListener('keydown', onKey);
+    onClose && onClose();
+  }
+  back.addEventListener('mousedown', (e) => { if (e.target === back) close(); });
+  return close;
+}
+// positions a spinner overlay over any relatively/absolutely positioned
+// container (e.g. #stage-wrap during a project load). Returns hide().
+function showSpinner(container) {
+  const overlay = el('div', 'spinner-overlay');
+  overlay.appendChild(el('div', 'spinner'));
+  container.appendChild(overlay);
+  return () => overlay.remove();
+}
 function setProgress(frac) {
   const bar = document.getElementById('status-progress');
   const fill = document.getElementById('status-progress-fill');
@@ -180,16 +235,9 @@ function canvasToU8(canvas, mime, quality) {
   });
 }
 
-async function saveCanvasImage(canvas, baseName) {
-  const p = await window.native.chooseSavePath({
-    defaultName: baseName + '.png',
-    filters: [
-      { name: 'PNG', extensions: ['png'] },
-      { name: 'JPEG', extensions: ['jpg'] },
-      { name: 'TIFF', extensions: ['tif'] }
-    ]
-  });
-  if (!p) return null;
+// shared ext-branch write logic — no dialog, no toast (used by both the
+// interactive single-export path and the silent batch-export loop).
+async function writeCanvasToPath(canvas, p) {
   const ext = p.split('.').pop().toLowerCase();
   if (ext === 'tif' || ext === 'tiff') {
     const ctx = canvas.getContext('2d');
@@ -200,6 +248,27 @@ async function saveCanvasImage(canvas, baseName) {
   } else {
     await window.native.writeFile(p, await canvasToU8(canvas, 'image/png'), false);
   }
+  return p;
+}
+
+// batch export: write straight to a pre-resolved path, no save dialog.
+async function saveCanvasImageToPath(canvas, outPath) {
+  return writeCanvasToPath(canvas, outPath);
+}
+
+async function saveCanvasImage(canvas, baseName) {
+  const dir = localStorage.getItem('mfx.exportDir');
+  const p = await window.native.chooseSavePath({
+    defaultName: baseName + '.png',
+    defaultDir: dir || undefined,
+    filters: [
+      { name: 'PNG', extensions: ['png'] },
+      { name: 'JPEG', extensions: ['jpg'] },
+      { name: 'TIFF', extensions: ['tif'] }
+    ]
+  });
+  if (!p) return null;
+  await writeCanvasToPath(canvas, p);
   toast('SAVED → ' + p);
   return p;
 }

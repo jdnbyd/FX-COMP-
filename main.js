@@ -36,12 +36,11 @@ function createWindow() {
     backgroundColor: '#06080a',
     show: false,
     autoHideMenuBar: true,
-    title: 'SIGNAL STUDIO',
+    title: 'midFX',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false,
-      webviewTag: true
+      nodeIntegration: false
     }
   });
   win.once('ready-to-show', () => win.show());
@@ -121,6 +120,19 @@ ipcMain.handle('open-media', async (e, kind) => {
 
 ipcMain.handle('load-media', async (e, p) => describeMedia(p));
 
+// batch import — images only (see HANDOFF.md, batch mode is scoped to
+// stills; video batch would mean running the CPU-heavy per-frame pipeline
+// across N videos sequentially, a follow-up if ever wanted).
+ipcMain.handle('open-media-batch', async () => {
+  const filtersImg = [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'tif', 'tiff'] }];
+  const r = await dialog.showOpenDialog(win, {
+    properties: ['openFile', 'multiSelections'],
+    filters: filtersImg
+  });
+  if (r.canceled || !r.filePaths.length) return null;
+  return r.filePaths.map(describeMedia);
+});
+
 // Convert .mov (or anything) to an h264 mp4 in temp so Chromium can play it.
 ipcMain.handle('convert-mov', async (e, inPath) => {
   if (!ffmpegPath) throw new Error('ffmpeg-static not installed');
@@ -138,7 +150,7 @@ ipcMain.handle('convert-mov', async (e, inPath) => {
 
 ipcMain.handle('choose-save-path', async (e, opt) => {
   const r = await dialog.showSaveDialog(win, {
-    defaultPath: opt.defaultName,
+    defaultPath: opt.defaultDir ? path.join(opt.defaultDir, opt.defaultName) : opt.defaultName,
     filters: opt.filters
   });
   if (r.canceled || !r.filePath) return null;
@@ -160,6 +172,87 @@ ipcMain.handle('write-tiff', async (e, p, w, h, rgba) => {
 });
 
 ipcMain.handle('open-external', (e, url) => shell.openExternal(url));
+
+// shared directory picker — backs both the Settings default export folder
+// and the batch-export destination picker.
+ipcMain.handle('choose-directory', async (e, opt) => {
+  const r = await dialog.showOpenDialog(win, {
+    properties: ['openDirectory'],
+    defaultPath: opt && opt.defaultPath
+  });
+  if (r.canceled || !r.filePaths[0]) return null;
+  return r.filePaths[0];
+});
+
+// ---- projects: recent-projects index (recents.json) + .midfx file I/O ----
+const PROJECTS_DIR = path.join(app.getPath('userData'), 'projects');
+const RECENTS_PATH = path.join(PROJECTS_DIR, 'recents.json');
+
+function ensureProjectsDir() { fs.mkdirSync(PROJECTS_DIR, { recursive: true }); }
+function readRecents() {
+  ensureProjectsDir();
+  try { return JSON.parse(fs.readFileSync(RECENTS_PATH, 'utf8')); } catch (e) { return []; }
+}
+function writeRecents(list) { ensureProjectsDir(); fs.writeFileSync(RECENTS_PATH, JSON.stringify(list, null, 2)); }
+
+ipcMain.handle('list-recent-projects', () => {
+  const list = readRecents().filter((r) => fs.existsSync(r.path));
+  writeRecents(list); // prune entries whose file went missing
+  return list;
+});
+
+ipcMain.handle('register-recent-project', (e, entry) => {
+  let list = readRecents().filter((r) => r.path !== entry.path);
+  list.unshift(entry);
+  list = list.slice(0, 20);
+  writeRecents(list);
+  return list;
+});
+
+ipcMain.handle('clear-recent-projects', () => { writeRecents([]); return true; });
+
+// ---- custom skin: background / slider track+thumb / panel texture images ----
+const SKIN_DIR = path.join(app.getPath('userData'), 'skins', 'custom');
+
+ipcMain.handle('import-skin-image', async (e, { slot }) => {
+  const r = await dialog.showOpenDialog(win, {
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }]
+  });
+  if (r.canceled || !r.filePaths[0]) return null;
+  fs.mkdirSync(SKIN_DIR, { recursive: true });
+  const ext = path.extname(r.filePaths[0]) || '.png';
+  const dest = path.join(SKIN_DIR, slot + ext);
+  // clear any previous file for this slot under a different extension
+  for (const f of fs.readdirSync(SKIN_DIR)) {
+    if (f.startsWith(slot + '.')) fs.unlinkSync(path.join(SKIN_DIR, f));
+  }
+  fs.copyFileSync(r.filePaths[0], dest);
+  return dest;
+});
+
+ipcMain.handle('clear-skin-image', (e, { slot }) => {
+  if (!fs.existsSync(SKIN_DIR)) return true;
+  for (const f of fs.readdirSync(SKIN_DIR)) {
+    if (f.startsWith(slot + '.')) fs.unlinkSync(path.join(SKIN_DIR, f));
+  }
+  return true;
+});
+
+ipcMain.handle('open-project-file', async () => {
+  const r = await dialog.showOpenDialog(win, {
+    properties: ['openFile'],
+    filters: [{ name: 'midFX Project', extensions: ['midfx'] }]
+  });
+  if (r.canceled || !r.filePaths[0]) return null;
+  const p = r.filePaths[0];
+  return { path: p, data: JSON.parse(fs.readFileSync(p, 'utf8')) };
+});
+
+ipcMain.handle('read-project-file', (e, p) => {
+  if (!fs.existsSync(p)) return null;
+  return JSON.parse(fs.readFileSync(p, 'utf8'));
+});
 
 // ---- video export: PNG frames piped into ffmpeg ----
 let vex = null;

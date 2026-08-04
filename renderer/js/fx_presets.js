@@ -50,28 +50,30 @@ window.FX_PRESETS = {
     { name: 'White broadcast', params: { spacing: 8, maxT: 6, color: '#eaf6f9', softness: 8 } }
   ],
   air: [
-    { name: 'Carnival dragon', params: { smoothness: 10, pastel: 0.45, saturation: 0.6, rainbow: 0.4, outline: 0.65, glow: 0.5 } },
-    { name: 'Soft portrait', params: { smoothness: 14, blend: 0.9, pastel: 0.25, rainbow: 0.08, outline: 0.25 } },
-    { name: 'T-shirt boardwalk', params: { smoothness: 8, pastel: 0.5, saturation: 0.8, rainbow: 0.5, rainbowScale: 1.4, outline: 0.7, grain: 0.12 } },
-    { name: 'Dreamy haze', params: { smoothness: 22, blend: 1, pastel: 0.6, rainbow: 0.2, outline: 0, glow: 0.6 } },
-    { name: 'Dark fantasy van', params: { smoothness: 9, pastel: 0.1, saturation: 0.7, rainbow: 0.3, outline: 0.9, outlineSoft: 3, grain: 0.1 } },
-    { name: 'Chrome mist', params: { smoothness: 12, pastel: 0.3, saturation: -0.2, rainbow: 0.15, glow: 0.7, outline: 0.4 } },
-    { name: 'Hard liner', params: { smoothness: 5, blend: 0.7, outline: 1, outlineSoft: 1, rainbow: 0.1 } },
-    { name: 'Bubble pastel', params: { smoothness: 18, pastel: 0.7, saturation: 0.4, rainbow: 0.35, rainbowScale: 3.4, outline: 0.2 } },
-    { name: 'Neon fog', params: { smoothness: 16, pastel: 0.2, saturation: 0.9, rainbow: 0.65, rainbowScale: 1, glow: 0.8, outline: 0.3 } },
-    { name: 'Faded mural', params: { smoothness: 11, pastel: 0.4, saturation: 0.15, rainbow: 0.18, outline: 0.5, grain: 0.2 } }
+    { name: 'Carnival dragon', params: { smoothness: 10, pastel: 0.45, saturation: 0.6, mistMode: 'iridescent', rainbow: 0.5, outline: 0.65, glow: 0.5 } },
+    { name: 'Soft portrait', params: { smoothness: 14, blend: 0.9, pastel: 0.25, mistMode: 'iridescent', rainbow: 0.1, outline: 0.25 } },
+    { name: 'T-shirt boardwalk', params: { smoothness: 8, pastel: 0.5, saturation: 0.8, mistMode: 'iridescent', rainbow: 0.6, rainbowScale: 1.4, outline: 0.7, grain: 0.12 } },
+    { name: 'Dreamy haze', params: { smoothness: 22, blend: 1, pastel: 0.6, mistMode: 'iridescent', rainbow: 0.25, outline: 0, glow: 0.6 } },
+    { name: 'Dark fantasy van', params: { smoothness: 9, pastel: 0.1, saturation: 0.7, mistMode: 'iridescent', rainbow: 0.4, outline: 0.9, outlineSoft: 3, grain: 0.1 } },
+    { name: 'Chrome mist', params: { smoothness: 12, pastel: 0.3, saturation: -0.2, mistMode: 'iridescent', rainbow: 0.35, glow: 0.7, outline: 0.4 } },
+    { name: 'Hard liner', params: { smoothness: 5, blend: 0.7, outline: 1, outlineSoft: 1, mistMode: 'iridescent', rainbow: 0.12 } },
+    { name: 'Bubble pastel', params: { smoothness: 18, pastel: 0.7, saturation: 0.4, mistMode: 'iridescent', rainbow: 0.55, rainbowScale: 3.4, outline: 0.2 } },
+    { name: 'Neon fog', params: { smoothness: 16, pastel: 0.2, saturation: 0.9, mistMode: 'iridescent', rainbow: 0.8, rainbowScale: 1, glow: 0.8, outline: 0.3 } },
+    { name: 'Faded mural', params: { smoothness: 11, pastel: 0.4, saturation: 0.15, mistMode: 'foliage', rainbow: 0.45, rainbowScale: 1.2, outline: 0.5, grain: 0.2 } }
   ],
   paper: [
-    { name: 'Office scan', params: { mode: 'white', plate: 1, opacity: 0.45, contrast: 0.12, distort: 2, grain: 0.08 } },
-    { name: 'Aged document', params: { mode: 'white', plate: 3, opacity: 0.75, brightness: -0.06, contrast: 0.2, distort: 5, desat: 0.35, grain: 0.16 } },
-    { name: 'Photocopy gen 3', params: { mode: 'white', plate: 2, opacity: 0.6, contrast: 0.5, desat: 0.9, distort: 6, grain: 0.24 } },
-    { name: 'Black archive', params: { mode: 'black', plate: 1, opacity: 0.6, contrast: 0.15, grain: 0.12 } },
-    { name: 'Charcoal press', params: { mode: 'black', plate: 3, opacity: 0.8, brightness: -0.08, contrast: 0.3, grain: 0.2 } },
-    { name: 'Fiber heavy', params: { mode: 'white', plate: 4, opacity: 0.9, texScale: 0.6, contrast: 0.1, grain: 0.1 } },
-    { name: 'Warped fax', params: { mode: 'white', plate: 2, opacity: 0.5, distort: 11, distortScale: 1.5, desat: 0.7, contrast: 0.35 } },
-    { name: 'Soft print', params: { mode: 'white', plate: 1, opacity: 0.35, brightness: 0.06, contrast: -0.05, desat: 0.2, grain: 0.05 } },
-    { name: 'Night scan', params: { mode: 'black', plate: 2, opacity: 0.7, brightness: -0.12, distort: 3, grain: 0.18 } },
-    { name: 'Zine crunch', params: { mode: 'white', plate: 3, opacity: 0.65, texScale: 1.6, contrast: 0.45, desat: 0.55, distort: 4, grain: 0.3 } }
+    { name: 'Office scan', params: { plate: 'paper-white-1', opacity: 0.45, contrast: 0.12, distort: 2, grain: 0.08 } },
+    { name: 'Aged document', params: { plate: 'paper-white-3', opacity: 0.75, brightness: -0.06, contrast: 0.2, distort: 5, desat: 0.35, grain: 0.16 } },
+    { name: 'Photocopy gen 3', params: { plate: 'paper-white-2', opacity: 0.6, contrast: 0.5, desat: 0.9, distort: 6, grain: 0.24, printerScan: true, printerFade: 0.2, printerLevels: 5, printerHalftone: 0.15 } },
+    { name: 'Black archive', params: { plate: 'paper-black-1', opacity: 0.6, contrast: 0.15, grain: 0.12 } },
+    { name: 'Charcoal press', params: { plate: 'paper-black-3', opacity: 0.8, brightness: -0.08, contrast: 0.3, grain: 0.2 } },
+    { name: 'Fiber heavy', params: { plate: 'paper-white-4', opacity: 0.9, texScale: 0.6, contrast: 0.1, grain: 0.1 } },
+    { name: 'Warped fax', params: { plate: 'paper-white-2', opacity: 0.5, distort: 11, distortScale: 1.5, desat: 0.7, contrast: 0.35 } },
+    { name: 'Soft print', params: { plate: 'paper-white-1', opacity: 0.35, brightness: 0.06, contrast: -0.05, desat: 0.2, grain: 0.05 } },
+    { name: 'Night scan', params: { plate: 'paper-black-2', opacity: 0.7, brightness: -0.12, distort: 3, grain: 0.18 } },
+    { name: 'Zine crunch', params: { plate: 'paper-white-3', opacity: 0.65, texScale: 1.6, contrast: 0.45, desat: 0.55, distort: 4, grain: 0.3 } },
+    { name: 'Photocopier crush', params: { plate: 'paper-white-6', opacity: 0.4, contrast: 0.2, printerScan: true, printerFade: 0.45, printerLevels: 3, printerHalftone: 0.5 } },
+    { name: 'Weathered wall', params: { plate: 'paper-black-5', opacity: 0.7, texScale: 1.2, contrast: 0.2, desat: 0.3, grain: 0.15 } }
   ],
   reeded: [
     { name: 'Door panel', params: { pattern: 'vertical', ridge: 28, strength: 22, dispersion: 0.35, reflection: 0.35 } },
@@ -152,12 +154,12 @@ window.STACK_PRESETS = {
   'Vintage Print': {
     cc: { on: true, temperature: 0.22, fade: 0.4, contrast: 0.1, saturation: 0.08, vignette: 0.18 },
     riso: { on: true, channels: 2, ink1: 'Bright Red', ink2: 'Sunflower', grainAmt: 0.7, drift: 2, paper: '#f7e8dc', overprint: 0.8, gamma: 1.1 },
-    paper: { on: true, mode: 'white', plate: 3, opacity: 0.45, contrast: 0.12, distort: 2, grain: 0.2, desat: 0 }
+    paper: { on: true, plate: 'paper-white-3', opacity: 0.45, contrast: 0.12, distort: 2, grain: 0.2, desat: 0 }
   },
   'Ink Bleed': {
     cc: { on: true, temperature: -0.3, tint: -0.1, contrast: 0.15, saturation: -0.25, vignette: 0.3, shadows: -0.2 },
     air: { on: true, smoothness: 14, blend: 0.8, pastel: 0, saturation: 0.2, rainbow: 0, outline: 1, outlineSoft: 6, glow: 0, grain: 0.14 },
-    paper: { on: true, mode: 'black', plate: 2, opacity: 0.6, brightness: -0.08, contrast: 0.2, distort: 8, distortScale: 1.2, grain: 0.25 }
+    paper: { on: true, plate: 'paper-black-2', opacity: 0.6, brightness: -0.08, contrast: 0.2, distort: 8, distortScale: 1.2, grain: 0.25 }
   },
   'Archive HUD': {
     cc: { on: true, saturation: -0.2, contrast: 0.2 },

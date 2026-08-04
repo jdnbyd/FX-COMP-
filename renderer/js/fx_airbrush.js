@@ -1,14 +1,29 @@
 /* fx_airbrush.js — vintage airbrush: soft carnival-art blends (heavy smoothing),
    pastel lift, rainbow mist, soft dark outlines from edges, bloom, grain. */
 
+// foliage mist color stops — deep shadow -> mid leaf -> yellow-green highlight -> brown accent
+const AIR_FOLIAGE_STOPS = [
+  [40, 60, 24],
+  [74, 110, 40],
+  [150, 160, 60],
+  [110, 80, 40]
+];
+function airFoliageColor(nz) {
+  const n = Math.max(0, Math.min(1, nz)) * (AIR_FOLIAGE_STOPS.length - 1);
+  const i0 = Math.floor(n), i1 = Math.min(i0 + 1, AIR_FOLIAGE_STOPS.length - 1), f = n - i0;
+  const a = AIR_FOLIAGE_STOPS[i0], b = AIR_FOLIAGE_STOPS[i1];
+  return [lerp(a[0], b[0], f), lerp(a[1], b[1], f), lerp(a[2], b[2], f)];
+}
+
 window.FXAir = {
   defaults: {
     smoothness: 8,     // blur radius for the soft body
     blend: 0.85,       // how much smoothed image replaces source
     pastel: 0.35,      // lightness lift toward pastel
     saturation: 0.45,
-    rainbow: 0.25,     // rainbow mist amount
-    rainbowScale: 2.2, // cycles across frame
+    mistMode: 'iridescent', // iridescent | foliage
+    rainbow: 0.25,     // mist amount
+    rainbowScale: 2.2, // mist spatial scale
     outline: 0.55,     // dark edge strength
     outlineSoft: 2,    // edge blur radius
     glow: 0.35,        // highlight bloom
@@ -19,7 +34,8 @@ window.FXAir = {
     { type: 'range', key: 'blend', label: 'Soft blend', min: 0, max: 1, step: 0.02 },
     { type: 'range', key: 'pastel', label: 'Pastel lift', min: 0, max: 1, step: 0.02 },
     { type: 'range', key: 'saturation', label: 'Saturation', min: -0.5, max: 1.5, step: 0.02 },
-    { type: 'range', key: 'rainbow', label: 'Rainbow mist', min: 0, max: 1, step: 0.02 },
+    { type: 'select', key: 'mistMode', label: 'Mist style', options: [{ v: 'iridescent', l: 'Iridescent' }, { v: 'foliage', l: 'Foliage' }] },
+    { type: 'range', key: 'rainbow', label: 'Mist amount', min: 0, max: 1, step: 0.02 },
     { type: 'range', key: 'rainbowScale', label: 'Mist scale', min: 0.5, max: 6, step: 0.1 },
     { type: 'range', key: 'outline', label: 'Dark outline', min: 0, max: 1, step: 0.02 },
     { type: 'range', key: 'outlineSoft', label: 'Outline soft', min: 0, max: 8, step: 0.5 },
@@ -37,9 +53,10 @@ window.FXAir = {
     const Gb = rad > 0 ? blurField(G, w, h, rad) : G;
     const Bb = rad > 0 ? blurField(B, w, h, rad) : B;
 
-    // edge field from blurred luma (soft dark outlines)
+    const needsEdge = p.outline > 0 || (p.mistMode === 'iridescent' && p.rainbow > 0);
+    // edge field from blurred luma (soft dark outlines, and iridescent mist phase)
     let edge = null;
-    if (p.outline > 0) {
+    if (needsEdge) {
       const L = new Float32Array(n);
       for (let j = 0; j < n; j++) L[j] = (Rb[j] * 0.2126 + Gb[j] * 0.7152 + Bb[j] * 0.0722) / 255;
       edge = new Float32Array(n);
@@ -51,6 +68,15 @@ window.FXAir = {
         }
       }
       if (p.outlineSoft > 0) edge = blurField(edge, w, h, Math.round(p.outlineSoft));
+    }
+
+    // blotchy low-frequency noise field for the foliage mist mode
+    let foliageField = null;
+    if (p.mistMode === 'foliage' && p.rainbow > 0) {
+      const raw = new Float32Array(n);
+      const frng = mulberry32(99);
+      for (let k = 0; k < n; k++) raw[k] = frng();
+      foliageField = blurField(raw, w, h, Math.max(1, Math.round(p.rainbowScale * 8)));
     }
 
     const rng = mulberry32(7);
@@ -69,16 +95,26 @@ window.FXAir = {
       const l = r * 0.2126 + g * 0.7152 + b * 0.0722;
       r = l + (r - l) * sat; g = l + (g - l) * sat; b = l + (b - l) * sat;
 
-      // rainbow mist (smooth hue field, soft-light-ish)
+      // mist: iridescent (edge/highlight-driven thin-film sheen) or foliage (blotchy organic tint)
       if (p.rainbow > 0) {
-        const x = j % w, y = (j / w) | 0;
-        const t = (x / w + y / h) * Math.PI * p.rainbowScale;
-        const mr = 128 + 127 * Math.sin(t);
-        const mg = 128 + 127 * Math.sin(t + 2.094);
-        const mb = 128 + 127 * Math.sin(t + 4.188);
-        r = r + (mr - 128) * p.rainbow * 0.7;
-        g = g + (mg - 128) * p.rainbow * 0.7;
-        b = b + (mb - 128) * p.rainbow * 0.7;
+        if (p.mistMode === 'iridescent') {
+          const e = edge ? edge[j] : 0;
+          const t = (e * 3 + l / 255) * Math.PI * p.rainbowScale;
+          const mr = 128 + 90 * Math.sin(t);
+          const mg = 128 + 90 * Math.sin(t + 2.094);
+          const mb = 128 + 90 * Math.sin(t + 4.188);
+          const amt = p.rainbow * 0.6 * (0.25 + e * 1.5);
+          r = r + (mr - 128) * amt;
+          g = g + (mg - 128) * amt;
+          b = b + (mb - 128) * amt;
+        } else {
+          const nz = foliageField ? foliageField[j] : 0.5;
+          const [tr, tg, tb] = airFoliageColor(nz);
+          const amt = p.rainbow * 0.55;
+          r = r * (1 - amt) + tr * amt;
+          g = g * (1 - amt) + tg * amt;
+          b = b * (1 - amt) + tb * amt;
+        }
       }
 
       // glow on highlights
